@@ -1,0 +1,103 @@
+import re
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+
+# data from the 2022 NFL season
+df = pd.read_csv("C:/Users/zayne/Downloads/QB Data.csv")
+# remove commas to represent numbers as integers --> ("1,000" = 1000)
+for i in range(len(df["Yard"])):
+    df.iloc[i,5] = re.sub(",", "", df.iloc[i,5])
+    df.iloc[i,9] = re.sub(",", "", df.iloc[i,9])
+df = df.astype({"Yard":"int","Rush Yard":"int"})
+
+# convert total data to per game data
+for i in range(len(df["G"])):
+    df.iloc[i,4] = df.iloc[i,4]/df.iloc[i,2]
+    df.iloc[i,5] = df.iloc[i,5]/df.iloc[i,2]
+    df.iloc[i,6] = df.iloc[i,6]/df.iloc[i,2]
+    df.iloc[i,8] = df.iloc[i,8]/df.iloc[i,2]
+    df.iloc[i,9] = df.iloc[i,9]/df.iloc[i,2]
+    df.iloc[i,10] = df.iloc[i,10]/df.iloc[i,2]
+# classify each quarterback as "rushing" if they average 25+ rushing yards per game    
+target = (df["Rush Yard"] > 25).astype(int)
+
+# convert dataframe to numpy array
+used_df = df.iloc[:,[4, 5, 6, 8, 9, 10]]
+data = used_df.to_numpy()
+
+# standardize data
+scaler = MinMaxScaler()
+standard_data = scaler.fit_transform(data)
+
+# center data
+mu = np.mean(standard_data, axis = 0, keepdims = True)
+centered_data = standard_data - mu
+
+U,S,VT = np.linalg.svd(centered_data, full_matrices=False)
+X_2D = np.dot(centered_data,VT[0:2,:].T)
+
+# add player initials to the scatterplot to identify where each player falls
+names = np.array(["PM", "JA", "JHu", "JBu", "GS", "KC", "TL", "JH", "JGo", "JF", "TB", "DJ", "AR", "RW", "TT", "DC", "LJ", "DP",
+         "DM", "MM", "KM", "MJ", "MR", "AD", "JBr", "JGa", "RT", "KP", "BM"])
+
+# Plot the reduced data along with the player classification
+fig = plt.figure()
+colors = ['blue', 'green']
+labels = ["Passing", "Rushing"]
+for i in range(0,2):
+    plt.scatter(X_2D[:,0][target == i],-1*X_2D[:,1][target == i], color = colors[i], alpha=0.5, label= labels[i])
+for i in range(len(X_2D)):
+    plt.annotate(names[i], (X_2D[i,0], -1*X_2D[i,1]), fontsize=8)
+plt.legend()
+plt.xlabel("Rushing")
+plt.ylabel("Passing")
+plt.show()
+
+# use the previous model on new data from the 2021 season
+# data from the 2021 NFL season
+df_21 = pd.read_csv("C:/Users/zayne/Downloads/QB Data 21.csv")
+# remove commas to represent numbers as integers --> ("1,000" = 1000)
+for i in range(len(df_21["Yard"])):
+    df_21.iloc[i,5] = re.sub(",", "", df_21.iloc[i,5])
+df_21 = df_21.astype({"Yard":"int"})
+
+# convert total data to per game data
+for i in range(len(df_21["G"])):
+    df_21.iloc[i,4] = df_21.iloc[i,4]/df_21.iloc[i,2]
+    df_21.iloc[i,5] = df_21.iloc[i,5]/df_21.iloc[i,2]
+    df_21.iloc[i,6] = df_21.iloc[i,6]/df_21.iloc[i,2]
+    df_21.iloc[i,8] = df_21.iloc[i,8]/df_21.iloc[i,2]
+    df_21.iloc[i,9] = df_21.iloc[i,9]/df_21.iloc[i,2]
+    df_21.iloc[i,10] = df_21.iloc[i,10]/df_21.iloc[i,2]
+# classify each quarterback as "rushing" if they average 25+ rushing yards per game    
+target_21 = (df_21["Rush Yard"] > 25).astype(int)
+
+# convert dataframe to numpy array
+used_df_21 = df_21.iloc[:,[4, 5, 6, 8, 9, 10]]
+data_21 = used_df_21.to_numpy()
+
+# standardize data
+# already fit test data
+standard_data_21 = scaler.transform(data_21)
+# Center the data around previous means
+centered_data_21 = standard_data_21 - mu
+# Apply learnt PCA model
+X_new_2D = centered_data_21@VT[0:2,:].T
+# player names
+names_21 = np.array(["JA", "TB", "JH", "PM", "MS", "DP", "JB", "AR", "KC", "JHu", "KM", "DC", "RT", "CW", "LJ", "JGa", "MR",
+         "MJ", "TH", "RW", "BR", "TL", "TeB", "JGo", "BM", "TT", "SD", "DJ", "DM", "ZW", "JF"])
+
+fig = plt.figure()
+colors = ['blue', 'green']
+labels = ["Passing", "Rushing"]
+for i in range(0,2):
+    plt.scatter(X_new_2D[:,0][target_21 == i],-1*X_new_2D[:,1][target_21 == i], color = colors[i], alpha=0.5, label= labels[i])
+for i in range(len(X_new_2D)):
+    plt.annotate(names_21[i], (X_new_2D[i,0], -1*X_new_2D[i,1]), fontsize=8)
+plt.legend()
+plt.xlabel("Rushing")
+plt.ylabel("Passing")
+plt.show()
+
